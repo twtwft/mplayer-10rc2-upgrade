@@ -408,6 +408,13 @@ typedef struct DSPContext {
     void (*vc1_inv_trans_4x4)(DCTELEM *b, int n);
     void (*vc1_v_overlap)(uint8_t* src, int stride);
     void (*vc1_h_overlap)(uint8_t* src, int stride);
+    void (*vc1_v_loop_filter4)(uint8_t *src, int stride, int pq);
+    void (*vc1_h_loop_filter4)(uint8_t *src, int stride, int pq);
+    void (*vc1_v_loop_filter8)(uint8_t *src, int stride, int pq);
+    void (*vc1_h_loop_filter8)(uint8_t *src, int stride, int pq);
+    void (*vc1_v_loop_filter16)(uint8_t *src, int stride, int pq);
+    void (*vc1_h_loop_filter16)(uint8_t *src, int stride, int pq);
+
     /* put 8x8 block with bicubic interpolation and quarterpel precision
      * last argument is actually round value instead of height
      */

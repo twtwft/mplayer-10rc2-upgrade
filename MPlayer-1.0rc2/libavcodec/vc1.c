@@ -42,6 +42,21 @@
 #define AC_VLC_BITS 9
 static const uint16_t table_mb_intra[64][2];
 
+static void vc1_loop_filter_iblk(MpegEncContext *s, int pq)
+{
+    int i, j;
+    if(!s->first_slice_line)
+        s->dsp.vc1_v_loop_filter16(s->dest[0], s->linesize, pq);
+    s->dsp.vc1_v_loop_filter16(s->dest[0] + 8*s->linesize, s->linesize, pq);
+    for(i = !s->mb_x*8; i < 16; i += 8)
+        s->dsp.vc1_h_loop_filter16(s->dest[0] + i, s->linesize, pq);
+    for(j = 0; j < 2; j++){
+        if(!s->first_slice_line)
+            s->dsp.vc1_v_loop_filter8(s->dest[j+1], s->uvlinesize, pq);
+        if(s->mb_x)
+            s->dsp.vc1_h_loop_filter8(s->dest[j+1], s->uvlinesize, pq);
+    }
+}
 
 static inline int decode210(GetBitContext *gb){
     if (get_bits1(gb))
@@ -3439,8 +3454,9 @@ static void vc1_decode_i_blocks(VC1Context *v)
     s->mb_intra = 1;
     s->first_slice_line = 1;
     for(s->mb_y = 0; s->mb_y < s->mb_height; s->mb_y++) {
+        s->mb_x = 0;
+        ff_init_block_index(s);
         for(s->mb_x = 0; s->mb_x < s->mb_width; s->mb_x++) {
-            ff_init_block_index(s);
             ff_update_block_index(s);
             s->dsp.clear_blocks(s->block[0]);
             mb_pos = s->mb_x + s->mb_y * s->mb_width;
@@ -3495,6 +3511,7 @@ static void vc1_decode_i_blocks(VC1Context *v)
                 s->dsp.vc1_v_overlap(s->dest[0] + 8 * s->linesize, s->linesize);
                 s->dsp.vc1_v_overlap(s->dest[0] + 8 * s->linesize + 8, s->linesize);
             }
+            if(v->s.loop_filter) vc1_loop_filter_iblk(s, v->pq);
 
             if(get_bits_count(&s->gb) > v->bits) {
                 ff_er_add_slice(s, 0, 0, s->mb_x, s->mb_y, (AC_END|DC_END|MV_END));
@@ -3625,6 +3642,7 @@ static void vc1_decode_i_blocks_adv(VC1Context *v)
                 s->dsp.vc1_v_overlap(s->dest[0] + 8 * s->linesize, s->linesize);
                 s->dsp.vc1_v_overlap(s->dest[0] + 8 * s->linesize + 8, s->linesize);
             }
+            if(v->s.loop_filter) vc1_loop_filter_iblk(s, v->pq);
 
             if(get_bits_count(&s->gb) > v->bits) {
                 ff_er_add_slice(s, 0, 0, s->mb_x, s->mb_y, (AC_END|DC_END|MV_END));
@@ -3729,6 +3747,7 @@ static void vc1_decode_b_blocks(VC1Context *v)
                 av_log(s->avctx, AV_LOG_ERROR, "Bits overconsumption: %i > %i at %ix%i\n", get_bits_count(&s->gb), v->bits,s->mb_x,s->mb_y);
                 return;
             }
+            if(v->s.loop_filter) vc1_loop_filter_iblk(s, v->pq);
         }
         ff_draw_horiz_band(s, s->mb_y * 16, 16);
         s->first_slice_line = 0;
