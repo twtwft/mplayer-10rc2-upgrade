@@ -24,6 +24,7 @@
  */
 
 #include "simple_idct.h"
+#include "intrax8.h"
 
 #define SKIP_TYPE_NONE 0
 #define SKIP_TYPE_MPEG 1
@@ -33,6 +34,7 @@
 
 typedef struct Wmv2Context{
     MpegEncContext s;
+    IntraX8Context x8;
     int j_type_bit;
     int j_type;
     int abt_flag;
@@ -471,8 +473,8 @@ s->picture_number++; //FIXME ?
 //        return wmv2_decode_j_picture(w); //FIXME
 
     if(w->j_type){
-        av_log(s->avctx, AV_LOG_ERROR, "J-type picture is not supported\n");
-        return -1;
+        ff_intrax8_decode_picture(&w->x8, 2*s->qscale, (s->qscale-1)|1 );
+        return 1;
     }
 
     return 0;
@@ -834,8 +836,19 @@ static int wmv2_decode_init(AVCodecContext *avctx){
 
     wmv2_common_init(w);
 
+    ff_intrax8_common_init(&w->x8,&w->s);
+
     return 0;
 }
+
+static int wmv2_decode_end(AVCodecContext *avctx)
+{
+    Wmv2Context *w = avctx->priv_data;
+
+    ff_intrax8_common_end(&w->x8);
+    return ff_h263_decode_end(avctx);
+}
+
 
 #ifdef CONFIG_WMV2_DECODER
 AVCodec wmv2_decoder = {
@@ -845,7 +858,7 @@ AVCodec wmv2_decoder = {
     sizeof(Wmv2Context),
     wmv2_decode_init,
     NULL,
-    ff_h263_decode_end,
+    wmv2_decode_end,
     ff_h263_decode_frame,
     CODEC_CAP_DRAW_HORIZ_BAND | CODEC_CAP_DR1,
 };

@@ -174,6 +174,7 @@ typedef struct DSPContext {
      */
     void (*gmc )(uint8_t *dst/*align 8*/, uint8_t *src/*align 1*/, int stride, int h, int ox, int oy,
                     int dxx, int dxy, int dyx, int dyy, int shift, int r, int width, int height);
+    void (*clear_block)(DCTELEM *block/*align 16*/);
     void (*clear_blocks)(DCTELEM *blocks/*align 16*/);
     int (*pix_sum)(uint8_t * pix, int line_size);
     int (*pix_norm1)(uint8_t * pix, int line_size);
@@ -425,6 +426,12 @@ typedef struct DSPContext {
      * last argument is actually round value instead of height
      */
     op_pixels_func put_vc1_mspel_pixels_tab[16];
+    /* intrax8 functions */
+    void (*x8_spatial_compensation[12])(uint8_t *src , uint8_t *dst, int linesize);
+    void (*x8_setup_spatial_compensation)(uint8_t *src, uint8_t *dst, int linesize,
+           int * range, int * sum,  int edges);
+    void (*x8_v_loop_filter)(uint8_t *src, int stride, int qscale);
+    void (*x8_h_loop_filter)(uint8_t *src, int stride, int qscale);
 } DSPContext;
 
 void dsputil_static_init(void);
